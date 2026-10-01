@@ -9,52 +9,264 @@ from tavily import TavilyClient
 
 client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
 
-st.set_page_config(page_title="Executive & Event Search Assistant", page_icon="🔎", layout="centered")
+st.set_page_config(page_title="Executive & Event Search Assistant", page_icon="🔎", layout="wide")
 
+# ============================================================
+# GLOBAL STYLE SYSTEM
+# ============================================================
 st.markdown("""
 <style>
-.stApp { background-color: #0e1117; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bg-deep: #070B14;
+    --bg-mid: #0B1020;
+    --bg-card: #101729;
+    --glass-bg: rgba(255,255,255,0.03);
+    --glass-border: rgba(255,255,255,0.08);
+    --text-primary: #F2F4F8;
+    --text-secondary: #8B93A7;
+    --accent-blue: #3B82F6;
+    --accent-indigo: #6366F1;
+    --accent-violet: #8B5CF6;
+    --accent-cyan: #22D3EE;
+    --accent-pink: #EC4899;
+    --accent-green: #22C55E;
+}
+
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+.stApp {
+    background:
+        radial-gradient(circle at 85% 0%, rgba(99,102,241,0.18) 0%, transparent 45%),
+        radial-gradient(circle at 10% 35%, rgba(139,92,246,0.14) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(34,211,238,0.08) 0%, transparent 50%),
+        var(--bg-deep);
+    color: var(--text-primary);
+}
+
+.block-container { max-width: 1300px; padding-top: 2rem; padding-bottom: 3rem; }
+
+/* ---------- Hero ---------- */
+.hero-title {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 6px;
+}
+.hero-title .grad {
+    background: linear-gradient(90deg, #8B5CF6, #3B82F6, #22D3EE);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.hero-sub { color: var(--text-secondary); font-size: 16px; max-width: 560px; margin-bottom: 18px; }
+
+.pill-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.pill {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 10px 16px;
+    backdrop-filter: blur(16px);
+    transition: all .25s ease;
+}
+.pill:hover { border-color: rgba(139,92,246,0.5); box-shadow: 0 0 20px rgba(99,102,241,0.25); transform: translateY(-2px); }
+.pill-icon { font-size: 18px; }
+.pill-title { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+.pill-desc { font-size: 11px; color: var(--text-secondary); }
+
+/* ---------- Glass card wrapper for the form ---------- */
 div[data-testid="stForm"] {
-    border: 1px solid #2a2e37;
-    border-radius: 12px;
-    padding: 24px;
-    background-color: #12151c;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 32px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
 }
+
+.search-heading { display:flex; align-items:center; gap:10px; font-size:20px; font-weight:700; margin-bottom: 18px; }
+
+/* ---------- Inputs ---------- */
+div[data-testid="stTextInput"] input,
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 14px !important;
+    color: var(--text-primary) !important;
+    padding: 10px 14px !important;
+    transition: all .2s ease;
+}
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
+    border-color: var(--accent-indigo) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.25) !important;
+}
+label { color: var(--text-secondary) !important; font-size: 13px !important; font-weight: 600 !important; }
+
+/* ---------- Slider ---------- */
+div[data-testid="stSlider"] div[role="slider"] {
+    background: linear-gradient(90deg, #8B5CF6, #22D3EE) !important;
+    box-shadow: 0 0 12px rgba(139,92,246,0.7);
+}
+div[data-testid="stSlider"] .st-emotion-cache-1y4p8pa,
+div[data-testid="stSlider"] [data-baseweb="slider"] > div > div {
+    background: linear-gradient(90deg, #8B5CF6, #3B82F6, #22D3EE) !important;
+}
+
+/* ---------- Primary CTA ---------- */
+div[data-testid="stFormSubmitButton"] button {
+    background: linear-gradient(90deg, #8B5CF6, #3B82F6, #22D3EE) !important;
+    border: none !important;
+    border-radius: 14px !important;
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    padding: 14px 0 !important;
+    box-shadow: 0 4px 24px rgba(99,102,241,0.4);
+    transition: all .2s ease;
+}
+div[data-testid="stFormSubmitButton"] button:hover {
+    filter: brightness(1.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(99,102,241,0.55);
+}
+div[data-testid="stFormSubmitButton"] button:active { transform: translateY(0px); }
+
+/* ---------- Download button ---------- */
+div[data-testid="stDownloadButton"] button {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+}
+div[data-testid="stDownloadButton"] button:hover { border-color: var(--accent-cyan) !important; }
+
+/* ---------- Status row ---------- */
+.status-row { display:flex; align-items:center; justify-content:space-between; margin: 28px 0 14px 0; flex-wrap: wrap; gap: 10px; }
+.status-left { display:flex; align-items:center; gap:10px; }
+.status-icon { font-size: 20px; }
+.status-title { font-weight:700; font-size:18px; }
+.status-sub { color: var(--text-secondary); font-size: 13px; }
+.live-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    background: rgba(34,197,94,0.12);
+    border: 1px solid rgba(34,197,94,0.4);
+    color: var(--accent-green);
+    border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 600;
+}
+.live-dot { width:7px; height:7px; border-radius:50%; background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%{opacity:1;} 50%{opacity:0.4;} 100%{opacity:1;} }
+.count-badge { color: var(--text-secondary); font-size: 13px; }
+
+/* ---------- Dashboard card (timeline wrapper) ---------- */
+.dash-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 24px 24px 8px 24px;
+    backdrop-filter: blur(16px);
+    margin-bottom: 24px;
+}
+.dash-card-title { font-weight: 700; font-size: 17px; display:flex; align-items:center; gap:8px; }
+.dash-card-sub { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
+
+/* ---------- Result cards ---------- */
 .result-card {
-    border: 1px solid #2a2e37;
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin-bottom: 10px;
-    background-color: #161a23;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    backdrop-filter: blur(14px);
+    transition: all .2s ease;
+    animation: fadein .4s ease;
 }
-.result-card a {
-    text-decoration: none;
-    color: #e6e6e6;
-    font-size: 16px;
-    font-weight: 500;
+.result-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(139,92,246,0.45);
+    box-shadow: 0 8px 28px rgba(99,102,241,0.18);
 }
-.result-card a:hover { color: #4da3ff; }
-.result-source { color: #8a8f98; font-size: 12px; margin-top: 4px; }
+@keyframes fadein { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform: translateY(0);} }
+.badge-news {
+    display:inline-block; background: rgba(59,130,246,0.15); color:#93C5FD;
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    border-radius: 6px; padding: 3px 8px; margin-right: 8px;
+}
+.result-meta { color: var(--text-secondary); font-size: 12px; margin-bottom: 6px; }
+.result-card a.result-title {
+    text-decoration: none; color: var(--text-primary);
+    font-size: 16px; font-weight: 600; line-height: 1.4; display:block; margin-bottom: 4px;
+}
+.result-card a.result-title:hover { color: var(--accent-cyan); }
+.result-source { color: var(--text-secondary); font-size: 12px; }
+
+/* ---------- Empty state ---------- */
+.empty-state {
+    text-align:center; padding: 60px 20px;
+    background: var(--glass-bg);
+    border: 1px dashed var(--glass-border);
+    border-radius: 20px;
+    margin-top: 20px;
+}
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.empty-sub { color: var(--text-secondary); font-size: 14px; }
+
+/* ---------- Error box ---------- */
+div[data-testid="stAlert"] {
+    background: rgba(239,68,68,0.08) !important;
+    border: 1px solid rgba(239,68,68,0.35) !important;
+    border-radius: 14px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 768px) {
+    .hero-title { font-size: 30px; }
+}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🔎 Executive & Event Search Assistant")
-st.caption("Fetch real-time articles, news, and events regarding specific company leadership.")
+# ============================================================
+# HERO
+# ============================================================
+st.markdown("""
+<div class="hero-title">🔎 <span class="grad">Executive &amp; Event</span><br>Search Assistant</div>
+<div class="hero-sub">Real-time intelligence on company leadership, events, news, and developments.</div>
+<div class="pill-row">
+    <div class="pill"><span class="pill-icon">⚡</span><div><div class="pill-title">Real-time</div><div class="pill-desc">news &amp; articles</div></div></div>
+    <div class="pill"><span class="pill-icon">👤</span><div><div class="pill-title">Leadership</div><div class="pill-desc">insights</div></div></div>
+    <div class="pill"><span class="pill-icon">📅</span><div><div class="pill-title">Events</div><div class="pill-desc">&amp; conferences</div></div></div>
+</div>
+""", unsafe_allow_html=True)
 
 RECENCY_MAP = {"Any time": None, "Past 24 hours": "d", "Past week": "w", "Past month": "m", "Past year": "y"}
 
+# ============================================================
+# SEARCH PANEL  (same fields, same keys — logic untouched)
+# ============================================================
 with st.form("search_form"):
+    st.markdown('<div class="search-heading">🔍 Search Executive News &amp; Events</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        exec_name = st.text_input("Executive Name", placeholder="e.g., Satya Nadella")
-        designation = st.text_input("Designation", placeholder="e.g., CEO")
+        exec_name = st.text_input("👤 Executive Name", placeholder="e.g., Satya Nadella")
+        designation = st.text_input("💼 Designation", placeholder="e.g., CEO")
         num_results = st.slider("Number of results to retrieve", 1, 20, 6)
     with col2:
-        company = st.text_input("Company Name", placeholder="e.g., Microsoft")
-        topic = st.text_input("Topic, Event, or Problem", placeholder="e.g., AI investment announcement")
-        recency = st.selectbox("Recency", list(RECENCY_MAP.keys()))
-    submitted = st.form_submit_button("Fetch Live Information", use_container_width=True)
+        company = st.text_input("🏢 Company Name", placeholder="e.g., Microsoft")
+        topic = st.text_input("📄 Topic, Event, or Problem", placeholder="e.g., AI investment announcement")
+        recency = st.selectbox("◷ Recency", list(RECENCY_MAP.keys()))
+    submitted = st.form_submit_button("🔎  Fetch Live Information  →", use_container_width=True)
 
+# ============================================================
+# SEARCH LOGIC — UNCHANGED FROM PREVIOUS VERSION
+# ============================================================
 def _q(name, company_, title_, include_title=True, include_company=True):
     """Build a quoted, executive-anchored query string."""
     parts = [f'"{name.strip()}"']
@@ -152,42 +364,86 @@ def parse_date(raw):
     except Exception:
         return None
 
+# ============================================================
+# RESULTS / STATES
+# ============================================================
 if submitted:
     if not exec_name and not company:
         st.error("Enter at least an Executive Name or Company Name.")
     else:
-        with st.spinner("Fetching live results..."):
+        with st.spinner("Analyzing executive intelligence · fetching current sources..."):
             try:
                 if exec_name.strip():
                     results, num_queries = fetch_executive_results(
                         exec_name, company, designation, num_results
                     )
-                    st.caption(f"Used {num_queries} search {'query' if num_queries == 1 else 'queries'} to reach these results.")
+                    query_note = f"Used {num_queries} search {'query' if num_queries == 1 else 'queries'} to reach these results."
                 else:
                     fallback_query = " ".join(p for p in [company.strip(), designation.strip(), topic.strip() or "News OR Events"] if p)
                     results = run_search(fallback_query, num_results)
+                    query_note = "Used 1 search query to reach these results."
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.markdown(f"""
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <div class="empty-title">Unable to retrieve intelligence</div>
+                    <div class="empty-sub">We couldn't retrieve the requested information. Please check the search parameters and try again.<br><span style="color:#6B7280;font-size:12px;">({e})</span></div>
+                </div>
+                """, unsafe_allow_html=True)
                 results = []
+                query_note = ""
 
         if not results:
-            st.info("No results found.")
+            if query_note != "" or exec_name or company:
+                st.markdown("""
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-title">No results found</div>
+                    <div class="empty-sub">Try broadening the topic, removing the designation filter, or widening recency.</div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
+            # ---- Status row ----
+            st.markdown(f"""
+            <div class="status-row">
+                <div class="status-left">
+                    <span class="status-icon">📋</span>
+                    <div>
+                        <div class="status-title">Search Results</div>
+                        <div class="status-sub">{query_note}</div>
+                    </div>
+                </div>
+                <div class="status-left">
+                    <span class="count-badge">{len(results)} results</span>
+                    <span class="live-pill"><span class="live-dot"></span>Live data</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # ---- Timeline view ----
             timeline_rows = []
             for r in results:
                 d = parse_date(r.get("published_date"))
                 if d is not None and not pd.isna(d):
                     timeline_rows.append({"date": pd.to_datetime(d), "title": r.get("title", "Untitled")})
 
+            st.markdown("""
+            <div class="dash-card">
+                <div class="dash-card-title">📈 Coverage Timeline</div>
+                <div class="dash-card-sub">Distribution of articles, events, and mentions over time.</div>
+            """, unsafe_allow_html=True)
+
             if timeline_rows:
                 df_timeline = pd.DataFrame(timeline_rows).sort_values("date")
                 counts = df_timeline.groupby(df_timeline["date"].dt.date).size().reset_index(name="articles")
                 counts.columns = ["date", "articles"]
-                st.subheader("Coverage Timeline")
-                st.bar_chart(counts.set_index("date"))
+                st.bar_chart(counts.set_index("date"), color="#8B5CF6")
             else:
                 st.caption("Timeline unavailable — no publish dates returned for these results.")
 
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # ---- CSV export ----
             csv_buffer = io.StringIO()
             writer = csv.writer(csv_buffer)
             writer.writerow(["Title", "URL", "Published Date"])
@@ -201,15 +457,27 @@ if submitted:
                 use_container_width=True,
             )
 
-            st.subheader("Results")
+            # ---- Headline cards ----
+            st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
             for r in results:
                 title = r.get("title", "Untitled")
                 url = r.get("url", "")
+                pub = r.get("published_date", "")
                 domain = url.split("/")[2] if url.count("/") >= 2 else ""
                 st.markdown(
                     f"""<div class="result-card">
-                            <a href="{url}" target="_blank">{title}</a>
-                            <div class="result-source">{domain}</div>
+                            <div class="result-meta"><span class="badge-news">NEWS</span>{domain} · {pub}</div>
+                            <a class="result-title" href="{url}" target="_blank">{title}</a>
+                            <div class="result-source">Read article →</div>
                         </div>""",
                     unsafe_allow_html=True
                 )
+else:
+    # ---- Default empty state before first search ----
+    st.markdown("""
+    <div class="empty-state">
+        <div class="empty-icon">🧭</div>
+        <div class="empty-title">Ready to investigate</div>
+        <div class="empty-sub">Enter an executive and company to discover recent news, events, and developments.</div>
+    </div>
+    """, unsafe_allow_html=True)
