@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 from tavily import TavilyClient
 
-client = TavilyClient(api_key=os.environ.get(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))
+client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
 
 st.set_page_config(page_title="Executive & Event Search Assistant", page_icon="🔎", layout="centered")
 
