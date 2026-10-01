@@ -1,7 +1,7 @@
 import os
 import io
 import csv
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 import streamlit as st
 import pandas as pd
@@ -105,6 +105,19 @@ div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
     box-shadow: 0 0 0 3px rgba(99,102,241,0.25) !important;
 }
 label { color: var(--text-secondary) !important; font-size: 13px !important; font-weight: 600 !important; }
+
+/* ---------- Date range input ---------- */
+div[data-testid="stDateInput"] input {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 14px !important;
+    color: var(--text-primary) !important;
+    padding: 10px 14px !important;
+}
+div[data-testid="stDateInput"] input:focus {
+    border-color: var(--accent-indigo) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.25) !important;
+}
 
 /* ---------- Slider ---------- */
 div[data-testid="stSlider"] div[role="slider"] {
@@ -246,10 +259,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-RECENCY_MAP = {"Any time": None, "Past 24 hours": "d", "Past week": "w", "Past month": "m", "Past year": "y"}
-
 # ============================================================
-# SEARCH PANEL  (same fields, same keys — logic untouched)
+# SEARCH PANEL  (same fields, logic untouched — recency replaced with date range)
 # ============================================================
 with st.form("search_form"):
     st.markdown('<div class="search-heading">🔍 Search Executive News &amp; Events</div>', unsafe_allow_html=True)
@@ -261,8 +272,23 @@ with st.form("search_form"):
     with col2:
         company = st.text_input("🏢 Company Name", placeholder="e.g., Microsoft")
         topic = st.text_input("📄 Topic, Event, or Problem", placeholder="e.g., AI investment announcement")
-        recency = st.selectbox("◷ Recency", list(RECENCY_MAP.keys()))
+        date_range = st.date_input(
+            "📅 Date Range",
+            value=(date.today() - timedelta(days=365), date.today()),
+            max_value=date.today(),
+            help="Narrows the search to this exact window — more precise than a recency bucket, and sent directly to the search API.",
+        )
     submitted = st.form_submit_button("🔎  Fetch Live Information  →", use_container_width=True)
+
+# Normalize the date_input result: it can be a single date while the user
+# is mid-selection, or a (start, end) tuple once both are picked.
+if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+    start_date, end_date = date_range
+elif isinstance(date_range, (tuple, list)) and len(date_range) == 1:
+    start_date, end_date = date_range[0], date.today()
+else:
+    start_date, end_date = date_range, date.today()
+
 
 # ============================================================
 # SEARCH LOGIC — UNCHANGED FROM PREVIOUS VERSION
@@ -303,7 +329,14 @@ def score_result(r, name, company_, title_):
 
 def run_search(query, n):
     fetch_n = min(max(n * 2, 10), 20)
-    resp = client.search(query=query, topic="news", max_results=fetch_n, include_answer=False)
+    resp = client.search(
+        query=query,
+        topic="news",
+        max_results=fetch_n,
+        include_answer=False,
+        start_date=start_date.isoformat(),
+        end_date=end_date.isoformat(),
+    )
     return resp.get("results", [])
 
 def fetch_executive_results(name, company_, title_, n):
