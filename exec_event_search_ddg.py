@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 from tavily import TavilyClient
 
-client = TavilyClient(api_key=os.environ.get("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"))
+client = TavilyClient(api_key=os.environ.get(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))
 
 st.set_page_config(page_title="Executive & Event Search Assistant", page_icon="🔎", layout="centered")
 
@@ -67,13 +67,22 @@ def _q(name, company_, title_, include_title=True, include_company=True):
     return " ".join(parts)
 
 def score_result(r, name, company_, title_):
-    """Relevance score: name mention is required; company/title add confidence."""
+    """Relevance score: at least partial name match required; company/title add confidence."""
     text = (r.get("title", "") + " " + r.get("content", "")).lower()
-    score = 0
-    if name.strip().lower() in text:
-        score += 3
+    name_tokens = [t for t in name.strip().lower().split() if t]
+    full_match = name.strip().lower() in text
+    last_name_match = len(name_tokens) > 1 and name_tokens[-1] in text
+    any_token_match = any(t in text for t in name_tokens if len(t) > 2)
+
+    if full_match:
+        score = 3
+    elif last_name_match:
+        score = 2
+    elif any_token_match:
+        score = 1
     else:
         return 0
+
     if company_.strip() and company_.strip().lower() in text:
         score += 2
     if title_.strip() and title_.strip().lower() in text:
@@ -81,7 +90,8 @@ def score_result(r, name, company_, title_):
     return score
 
 def run_search(query, n):
-    resp = client.search(query=query, topic="news", max_results=n, include_answer=False)
+    fetch_n = min(max(n * 2, 10), 20)
+    resp = client.search(query=query, topic="news", max_results=fetch_n, include_answer=False)
     return resp.get("results", [])
 
 def fetch_executive_results(name, company_, title_, n):
@@ -90,7 +100,6 @@ def fetch_executive_results(name, company_, title_, n):
     1) Name + Company + Title  (most targeted, run once)
     2) Name + Company          (only if step 1 insufficient)
     3) Name + Title            (only if step 2 still insufficient)
-    Stops as soon as enough high-confidence (name-matched) results are found.
     """
     seen_urls = set()
     scored = []
